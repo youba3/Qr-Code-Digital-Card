@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Digital Business Cards:
+    // Read is public so anyone scanning the QR code or visiting /c/:slug can view the card.
+    // Write (create, update, delete) is strictly restricted to the owning authenticated user.
+    match /cards/{uid} {
+      allow read: if true;
+      allow write: if isOwner(uid);
+    }
+  }
+}

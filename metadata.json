@@ -1,0 +1,7 @@
+{
+  "name": "QR Code Digital Card",
+  "description": "Create modern digital business cards with live preview, QR codes, PNG export, vCard 3.0 generation, and shareable public contact profiles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

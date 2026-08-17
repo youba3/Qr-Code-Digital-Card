@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "Card": {
+      "title": "Digital Business Card",
+      "description": "User's vertical digital business card profile and contact metadata",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "description": "Stable public slug for card URL and QR code",
+          "maxLength": 64
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Card owner full name",
+          "maxLength": 100
+        },
+        "title": {
+          "type": "string",
+          "description": "Professional title or role",
+          "maxLength": 100
+        },
+        "company": {
+          "type": "string",
+          "description": "Company or organization name",
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 50
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email address",
+          "maxLength": 100
+        },
+        "website": {
+          "type": "string",
+          "description": "Primary website or portfolio URL",
+          "maxLength": 200
+        },
+        "photo": {
+          "type": "string",
+          "description": "Profile photo URL or base64 data",
+          "maxLength": 500000
+        },
+        "theme": {
+          "type": "string",
+          "description": "Brand theme color hex",
+          "maxLength": 30
+        },
+        "layout": {
+          "type": "string",
+          "description": "Layout style",
+          "enum": ["vertical"]
+        },
+        "socials": {
+          "type": "array",
+          "description": "List of connected social platforms and channels"
+        },
+        "scans": {
+          "type": "number",
+          "description": "Total public views and scan counter"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp when last updated"
+        }
+      },
+      "required": ["slug", "fullName", "layout"]
+    }
+  },
+  "firestore": {
+    "/cards/{uid}": {
+      "schema": { "$ref": "Card" },
+      "description": "Stores exactly one digital business card per authenticated user"
+    }
+  }
+}
