@@ -165,8 +165,8 @@ export const EditorPage: React.FC<EditorPageProps> = ({
 
     try {
       showToast(t('editor.photoOptimizing'));
-      const compressed = await compressImage(file, 400, 400, 0.85);
-      const thumb = await compressImage(file, 64, 64, 0.4);
+      const compressed = await compressImage(file, 380, 380, 0.82);
+      const thumb = await compressImage(file, 52, 52, 0.35);
       const updated: CardData = {
         ...card,
         photo: compressed,
@@ -178,11 +178,16 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     } catch (err) {
       console.error('Failed to compress image', err);
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         if (typeof reader.result === 'string') {
+          let thumb = '';
+          try {
+            thumb = await compressImage(reader.result, 52, 52, 0.35);
+          } catch {}
           const updated: CardData = {
             ...card,
             photo: reader.result,
+            photoThumb: thumb,
           };
           onUpdateCard(updated);
           triggerAutoSave(updated);

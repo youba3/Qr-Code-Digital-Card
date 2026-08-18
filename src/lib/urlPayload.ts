@@ -42,17 +42,16 @@ export function encodeCardToUrlPayload(card: CardData): string {
 
     // Embed photo in URL payload (remote URL, micro-thumbnail, or short data URL)
     let photoToEmbed = '';
-    if (card.photoThumb && card.photoThumb.length < 1400) {
+    if (card.photoThumb && card.photoThumb.length < 3800) {
       photoToEmbed = card.photoThumb;
-    } else if (
-      card.photo &&
-      card.photo.trim().length > 0 &&
-      !card.photo.startsWith('data:') &&
-      (card.photo.startsWith('http') || card.photo.startsWith('/') || card.photo.length < 300)
-    ) {
-      photoToEmbed = card.photo;
-    } else if (card.photo && card.photo.length < 1200) {
-      photoToEmbed = card.photo;
+    } else if (card.photo && card.photo.trim().length > 0) {
+      if (
+        card.photo.startsWith('http') ||
+        card.photo.startsWith('/') ||
+        card.photo.length < 3500
+      ) {
+        photoToEmbed = card.photo;
+      }
     }
 
     const minimal: Record<string, any> = {

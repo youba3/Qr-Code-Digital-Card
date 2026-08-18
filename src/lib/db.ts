@@ -28,7 +28,7 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
       const decoded = decodeCardFromUrlPayload(dParam);
       if (decoded) {
         decoded.slug = decoded.slug || cleanSlug;
-        if (!decoded.photo || decoded.photo.includes('images.unsplash.com')) {
+        if (decoded.photo && decoded.photo.includes('images.unsplash.com')) {
           decoded.photo = '';
         }
         urlCard = decoded;
