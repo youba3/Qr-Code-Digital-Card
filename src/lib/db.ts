@@ -8,14 +8,25 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
   if (!slug) return null;
   const cleanSlug = slug.trim().toLowerCase();
 
-  // 1. URL encoded parameter fallback (?d= / #d=)
+  // 1. Check URL encoded payload parameter (?d= or #d=)
   if (typeof window !== 'undefined') {
     const searchParams = new URLSearchParams(window.location.search);
-    const dParam = searchParams.get('d');
+    let dParam = searchParams.get('d');
+
+    // Also check hash for d parameter (e.g. #/c/slug?d=... or #d=...)
+    if (!dParam && window.location.hash) {
+      try {
+        const hashStr = window.location.hash.replace(/^#/, '');
+        const hashQuery = hashStr.includes('?') ? hashStr.split('?')[1] : hashStr;
+        const hashParams = new URLSearchParams(hashQuery);
+        dParam = hashParams.get('d');
+      } catch {}
+    }
+
     if (dParam) {
       const decoded = decodeCardFromUrlPayload(dParam);
-      if (decoded && (decoded.slug.toLowerCase() === cleanSlug || !decoded.slug)) {
-        decoded.slug = cleanSlug;
+      if (decoded) {
+        decoded.slug = decoded.slug || cleanSlug;
         return decoded;
       }
     }
@@ -46,11 +57,11 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
 
   // 4. Check draft card
   const draft = loadLocalDraftCard();
-  if (draft.slug.toLowerCase() === cleanSlug) {
+  if (draft && draft.slug && draft.slug.toLowerCase() === cleanSlug) {
     return draft;
   }
 
-  // 5. Query local backend Express server
+  // 5. Query local backend Express server (if running)
   try {
     const res = await fetch(`/api/cards/${encodeURIComponent(cleanSlug)}`);
     if (res.ok) {
@@ -60,6 +71,11 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
       }
     }
   } catch {}
+
+  // 6. If slug is 'preview', return local draft
+  if (cleanSlug === 'preview' && draft) {
+    return draft;
+  }
 
   return null;
 }

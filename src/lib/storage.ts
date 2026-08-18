@@ -294,19 +294,19 @@ export function incrementScanCount(slug: string): number {
 
 /**
  * Returns public URL for sharing and QR code.
- * Includes compressed payload parameter `?d=...` or `#d=...` when card data is available,
- * guaranteeing 100% instant cross-device opening even if offline or if backend restarts!
+ * Includes compressed payload parameter `?d=...` when card data is available,
+ * guaranteeing 100% instant cross-device opening on any phone scanner even on static hosting like Netlify!
  */
 export function getPublicUrl(slug: string, card?: CardData): string {
-  if (!slug) slug = 'preview';
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cardforge.app';
+  const cleanSlug = (slug || card?.slug || 'preview').trim().toLowerCase();
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   if (card) {
     const encoded = encodeCardToUrlPayload(card);
-    if (encoded && encoded.length < 1800) {
-      return `${origin}/c/${slug}?d=${encoded}`;
+    if (encoded) {
+      return `${origin}/c/${cleanSlug}?d=${encoded}`;
     }
   }
 
-  return `${origin}/c/${slug}`;
+  return `${origin}/c/${cleanSlug}`;
 }

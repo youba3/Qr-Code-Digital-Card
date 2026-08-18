@@ -589,9 +589,9 @@ export const EditorPage: React.FC<EditorPageProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute start-4 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 select-none">
-                      cardforge.app/c/
+                  <div className="relative flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-full px-3.5 py-1.5 focus-within:bg-white focus-within:border-indigo-500 transition-colors shadow-2xs">
+                    <span className="text-xs font-mono text-slate-400 select-none shrink-0 pe-1">
+                      {typeof window !== 'undefined' ? window.location.host : 'cardforge.app'}/c/
                     </span>
                     <input
                       type="text"
@@ -599,7 +599,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
                       value={card.slug}
                       onChange={handleSlugChange}
                       placeholder={t('editor.slugPlaceholder')}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-mono rounded-full ps-36 pe-4 py-2.5 focus:bg-white focus:border-indigo-500 focus:outline-hidden transition-colors shadow-2xs"
+                      className="w-full bg-transparent border-0 text-slate-800 text-xs font-mono focus:outline-hidden p-0"
                     />
                   </div>
                   <button
