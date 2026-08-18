@@ -60,7 +60,20 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
 
       if (!querySnap.empty) {
         const firstDoc = querySnap.docs[0];
-        return { ...(firstDoc.data() as CardData), slug: cleanSlug };
+        const data = firstDoc.data() as CardData;
+        const rawPhoto = typeof data.photo === 'string' ? data.photo : '';
+        const cleanPhoto = rawPhoto.includes('images.unsplash.com') ? '' : rawPhoto;
+        const rawThumb = typeof data.photoThumb === 'string' ? data.photoThumb : '';
+
+        const fetchedCard: CardData = {
+          ...data,
+          slug: cleanSlug,
+          photo: cleanPhoto,
+          photoThumb: rawThumb,
+        };
+
+        saveLocalUserCard('slug_' + cleanSlug, fetchedCard);
+        return fetchedCard;
       }
     } catch (err) {
       console.warn('[Firestore] Error fetching card by slug:', err);

@@ -79,17 +79,23 @@ export async function loadCard(uid: string, fallbackEmail?: string | null, displ
       const snap = await getDoc(cardDocRef);
       if (snap.exists()) {
         const data = snap.data() as CardData;
-        if (data.photo && data.photo.includes('images.unsplash.com')) {
-          data.photo = '';
-        }
+        const rawPhoto = typeof data.photo === 'string' ? data.photo : '';
+        const cleanPhoto = rawPhoto.includes('images.unsplash.com') ? '' : rawPhoto;
+        const rawThumb = typeof data.photoThumb === 'string' ? data.photoThumb : '';
+
         const normalized: CardData = {
           ...createNewUserCard(uid, fallbackEmail, displayName),
           ...data,
+          photo: cleanPhoto,
+          photoThumb: rawThumb,
           slug: data.slug || uid.slice(0, 8).toLowerCase(),
           layout: 'vertical',
         };
         // Cache locally
         saveLocalUserCard(uid, normalized);
+        if (normalized.slug) {
+          registerSlugMapping(normalized.slug, uid);
+        }
         return normalized;
       }
     } catch (err) {
@@ -126,8 +132,13 @@ export async function loadCard(uid: string, fallbackEmail?: string | null, displ
  * Saves the card to Firestore cards/{uid} and local storage
  */
 export async function saveCard(card: CardData, uid?: string | null): Promise<CardData> {
+  const photoStr = typeof card.photo === 'string' ? card.photo : '';
+  const photoThumbStr = typeof card.photoThumb === 'string' ? card.photoThumb : '';
+
   const finalCard: CardData = {
     ...card,
+    photo: photoStr,
+    photoThumb: photoThumbStr,
     layout: 'vertical',
     updatedAt: new Date().toISOString(),
     scans: card.scans ?? 0,
