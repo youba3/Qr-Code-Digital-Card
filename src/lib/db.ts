@@ -51,6 +51,9 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
   // 3. Check local storage / slug mapping
   const localUid = getUidBySlugFromLocal(cleanSlug);
   if (localUid) {
+    if (localUid === 'draft') {
+      return loadLocalDraftCard();
+    }
     const localCard = getLocalUserCard(localUid);
     if (localCard) return localCard;
   }

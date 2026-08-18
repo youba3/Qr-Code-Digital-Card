@@ -127,11 +127,12 @@ export async function saveCard(card: CardData, uid?: string | null): Promise<Car
     scans: card.scans ?? 0,
   };
 
+  // Always save to draft cache
+  saveLocalDraftCard(finalCard);
+
   // 1. If UID exists, save to user specific key and Firestore
   if (uid) {
     saveLocalUserCard(uid, finalCard);
-
-    // Register slug mapping for local lookup
     registerSlugMapping(finalCard.slug, uid);
 
     if (isFirebaseConfigured && db) {
@@ -143,8 +144,7 @@ export async function saveCard(card: CardData, uid?: string | null): Promise<Car
       }
     }
   } else {
-    // Guest draft
-    saveLocalDraftCard(finalCard);
+    registerSlugMapping(finalCard.slug, 'draft');
   }
 
   // Also sync to server-side API for fallback public accessibility

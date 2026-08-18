@@ -4,7 +4,7 @@ import { EditorPage } from './components/EditorPage';
 import { PublicCard } from './components/PublicCard';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { loadDraftCard, saveDraftCard } from './lib/storage';
+import { loadDraftCard, saveDraftCard, getPublicUrl } from './lib/storage';
 import { loadCard } from './lib/cards';
 import type { CardData } from './types';
 
@@ -109,13 +109,19 @@ function AppContent() {
     }
   }, [user?.uid, user?.email, user?.displayName]);
 
-  const navigateToPublic = (slug: string) => {
+  const navigateToPublic = (slug: string, cardData?: CardData) => {
+    const targetCard = cardData || card;
+    const targetSlug = (slug || targetCard?.slug || 'preview').trim().toLowerCase();
+    const publicUrl = getPublicUrl(targetSlug, targetCard);
     try {
-      window.history.pushState({}, '', `/c/${slug}`);
+      window.history.pushState({}, '', publicUrl);
     } catch {
-      window.location.hash = `/c/${slug}`;
+      window.location.hash = `/c/${targetSlug}`;
     }
-    setCurrentRoute({ page: 'public', slug });
+    if (targetCard) {
+      setCard(targetCard);
+    }
+    setCurrentRoute({ page: 'public', slug: targetSlug });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

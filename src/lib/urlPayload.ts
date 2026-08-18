@@ -7,15 +7,40 @@ import type { CardData, SocialProfile } from '../types';
  */
 export function encodeCardToUrlPayload(card: CardData): string {
   try {
-    const socials = (card.socials || [])
-      .filter((s) => s.value && s.value.trim().length > 0)
-      .map((s) => ({
-        p: s.platform,
-        v: s.value.trim(),
-        o: s.onCard ? 1 : 0,
-      }));
+    const rawSocials = card.socials || [];
+    const socials: { p: string; v: string; o: number }[] = [];
+    const seenPlatforms = new Set<string>();
 
-    // Only include photo if it is a remote URL to prevent bloating QR payload
+    // Add direct contact items first if present
+    if (card.phone && card.phone.trim()) {
+      const existing = rawSocials.find((s) => s.platform === 'phone');
+      socials.push({ p: 'phone', v: card.phone.trim(), o: existing ? (existing.onCard ? 1 : 0) : 1 });
+      seenPlatforms.add('phone');
+    }
+    if (card.email && card.email.trim()) {
+      const existing = rawSocials.find((s) => s.platform === 'email');
+      socials.push({ p: 'email', v: card.email.trim(), o: existing ? (existing.onCard ? 1 : 0) : 1 });
+      seenPlatforms.add('email');
+    }
+    if (card.website && card.website.trim()) {
+      const existing = rawSocials.find((s) => s.platform === 'website');
+      socials.push({ p: 'website', v: card.website.trim(), o: existing ? (existing.onCard ? 1 : 0) : 1 });
+      seenPlatforms.add('website');
+    }
+
+    // Add other social platforms
+    rawSocials.forEach((s) => {
+      if (s.value && s.value.trim() && !seenPlatforms.has(s.platform)) {
+        socials.push({
+          p: s.platform,
+          v: s.value.trim(),
+          o: s.onCard ? 1 : 0,
+        });
+        seenPlatforms.add(s.platform);
+      }
+    });
+
+    // Remote or compact photo URL
     const isRemotePhoto = card.photo && !card.photo.startsWith('data:') && card.photo.length < 300;
 
     const minimal: Record<string, any> = {
@@ -48,7 +73,6 @@ export function decodeCardFromUrlPayload(encoded: string): CardData | null {
     if (!encoded) return null;
 
     let cleanEncoded = encoded.trim();
-    // In case the parameter was doubly encoded by some browser or scanner
     if (cleanEncoded.includes('%')) {
       try {
         cleanEncoded = decodeURIComponent(cleanEncoded);
@@ -57,7 +81,6 @@ export function decodeCardFromUrlPayload(encoded: string): CardData | null {
 
     let json = LZString.decompressFromEncodedURIComponent(cleanEncoded);
     if (!json) {
-      // Fallback: try decompressing directly if not URI-encoded
       json = LZString.decompress(cleanEncoded);
     }
     if (!json) return null;
@@ -66,23 +89,46 @@ export function decodeCardFromUrlPayload(encoded: string): CardData | null {
     if (!parsed || typeof parsed !== 'object') return null;
 
     // 1. Check ultra-compact representation
-    if ('n' in parsed || 's' in parsed || 'soc' in parsed || 'p' in parsed || 'e' in parsed || 't' in parsed) {
-      const socials: SocialProfile[] = Array.isArray(parsed.soc)
-        ? parsed.soc.map((s: any) => ({
-            platform: s.p || s.platform || 'website',
-            value: s.v || s.value || '',
-            onCard: s.o !== undefined ? Boolean(s.o) : (s.onCard ?? true),
-          }))
-        : [];
+    if (
+      'n' in parsed ||
+      's' in parsed ||
+      'soc' in parsed ||
+      'p' in parsed ||
+      'e' in parsed ||
+      't' in parsed ||
+      'c' in parsed
+    ) {
+      const rawSoc: any[] = Array.isArray(parsed.soc) ? parsed.soc : [];
+      const socials: SocialProfile[] = rawSoc.map((s: any) => ({
+        platform: s.p || s.platform || 'website',
+        value: s.v || s.value || '',
+        onCard: s.o !== undefined ? Boolean(s.o) : (s.onCard ?? true),
+      }));
+
+      const phone = parsed.p || '';
+      const email = parsed.e || '';
+      const website = parsed.w || '';
+
+      // Ensure phone, email, website are also represented in socials if not present
+      if (phone && !socials.some((s) => s.platform === 'phone')) {
+        socials.unshift({ platform: 'phone', value: phone, onCard: true });
+      }
+      if (email && !socials.some((s) => s.platform === 'email')) {
+        const idx = socials.some((s) => s.platform === 'phone') ? 1 : 0;
+        socials.splice(idx, 0, { platform: 'email', value: email, onCard: true });
+      }
+      if (website && !socials.some((s) => s.platform === 'website')) {
+        socials.push({ platform: 'website', value: website, onCard: true });
+      }
 
       return {
         slug: parsed.s || '',
         fullName: parsed.n || '',
         title: parsed.t || '',
         company: parsed.c || '',
-        phone: parsed.p || '',
-        email: parsed.e || '',
-        website: parsed.w || '',
+        phone,
+        email,
+        website,
         photo: parsed.ph || '',
         theme: parsed.th || '#101c5e',
         layout: 'vertical',
@@ -115,4 +161,3 @@ export function decodeCardFromUrlPayload(encoded: string): CardData | null {
   }
   return null;
 }
-

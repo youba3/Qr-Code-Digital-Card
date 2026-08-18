@@ -34,7 +34,7 @@ import { fetchCardViewCount } from '../lib/db';
 interface EditorPageProps {
   card: CardData;
   onUpdateCard: (updated: CardData) => void;
-  onNavigateToPublic: (slug: string) => void;
+  onNavigateToPublic: (slug: string, cardData?: CardData) => void;
   onNavigateToHome?: () => void;
 }
 
@@ -323,7 +323,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
             {card.slug && (
               <button
                 type="button"
-                onClick={() => onNavigateToPublic(card.slug)}
+                onClick={() => onNavigateToPublic(card.slug, card)}
                 className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 border border-white/20 text-white shadow-2xs backdrop-blur-md transition-all active:scale-95 cursor-pointer"
                 title={t('common.viewCard')}
               >
@@ -698,7 +698,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
                 {card.slug && (
                   <button
                     type="button"
-                    onClick={() => onNavigateToPublic(card.slug)}
+                    onClick={() => onNavigateToPublic(card.slug, card)}
                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <span>{t('editor.openPublic')}</span>
@@ -807,7 +807,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
         card={card}
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
-        onViewPublic={() => onNavigateToPublic(card.slug)}
+        onViewPublic={() => onNavigateToPublic(card.slug, card)}
       />
     </div>
   );

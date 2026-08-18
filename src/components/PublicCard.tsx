@@ -22,6 +22,8 @@ import { getPlatformDef, dynamicPlatform } from '../lib/platforms';
 import { downloadVCard } from '../lib/vcard';
 import { getCardBySlug, incrementCardScans } from '../lib/db';
 import { getPublicUrl } from '../lib/storage';
+import { decodeCardFromUrlPayload } from '../lib/urlPayload';
+import { loadLocalDraftCard } from '../lib/cards';
 import type { CardData, SocialProfile } from '../types';
 
 interface PublicCardProps {
@@ -38,9 +40,47 @@ export const PublicCard: React.FC<PublicCardProps> = ({
   onNavigateToHome,
 }) => {
   const { t } = useTranslation();
-  const [card, setCard] = useState<CardData | null>(fallbackCard || null);
-  const [loading, setLoading] = useState<boolean>(!fallbackCard);
-  const [scans, setScans] = useState<number>(fallbackCard?.scans || 0);
+
+  // 1. Immediately resolve initial card data synchronously so user info appears instantly
+  const initialCard = useMemo(() => {
+    // Check URL payload (?d= or #d=)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      let dParam = searchParams.get('d');
+      if (!dParam && window.location.hash) {
+        try {
+          const hashStr = window.location.hash.replace(/^#/, '');
+          const hashQuery = hashStr.includes('?') ? hashStr.split('?')[1] : hashStr;
+          const hashParams = new URLSearchParams(hashQuery);
+          dParam = hashParams.get('d');
+        } catch {}
+      }
+      if (dParam) {
+        const decoded = decodeCardFromUrlPayload(dParam);
+        if (decoded) {
+          decoded.slug = decoded.slug || slug;
+          return decoded;
+        }
+      }
+    }
+
+    // Check if fallbackCard from editor matches
+    if (fallbackCard && (fallbackCard.slug === slug || !slug || slug === 'preview')) {
+      return fallbackCard;
+    }
+
+    // Check local draft card
+    const draft = loadLocalDraftCard();
+    if (draft && (draft.slug === slug || slug === 'preview')) {
+      return draft;
+    }
+
+    return null;
+  }, [slug, fallbackCard]);
+
+  const [card, setCard] = useState<CardData | null>(initialCard);
+  const [loading, setLoading] = useState<boolean>(!initialCard);
+  const [scans, setScans] = useState<number>(initialCard?.scans || 0);
   const [copied, setCopied] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [savedContact, setSavedContact] = useState(false);
@@ -48,7 +88,9 @@ export const PublicCard: React.FC<PublicCardProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
+    if (!initialCard) {
+      setLoading(true);
+    }
 
     getCardBySlug(slug).then((loaded) => {
       if (!isMounted) return;
@@ -58,9 +100,9 @@ export const PublicCard: React.FC<PublicCardProps> = ({
         incrementCardScans(loaded.slug || slug, (loaded as any).uid).then((count) => {
           if (isMounted && count) setScans(count);
         });
-      } else if (fallbackCard) {
-        setCard(fallbackCard);
-        setScans(fallbackCard.scans || 0);
+      } else if (initialCard) {
+        setCard(initialCard);
+        setScans(initialCard.scans || 0);
       }
       setLoading(false);
     });
@@ -68,7 +110,7 @@ export const PublicCard: React.FC<PublicCardProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [slug, fallbackCard]);
+  }, [slug, initialCard]);
 
   const handleSaveContact = () => {
     if (!card) return;
