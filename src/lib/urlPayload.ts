@@ -92,8 +92,14 @@ export function decodeCardFromUrlPayload(encoded: string): CardData | null {
     }
 
     let json = LZString.decompressFromEncodedURIComponent(cleanEncoded);
+    if (!json && cleanEncoded.includes(' ')) {
+      json = LZString.decompressFromEncodedURIComponent(cleanEncoded.replace(/ /g, '+'));
+    }
     if (!json) {
       json = LZString.decompress(cleanEncoded);
+    }
+    if (!json && cleanEncoded.includes(' ')) {
+      json = LZString.decompress(cleanEncoded.replace(/ /g, '+'));
     }
     if (!json) return null;
 

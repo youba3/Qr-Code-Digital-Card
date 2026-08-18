@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { get, set } from 'idb-keyval';
 import { encodeCardToUrlPayload, decodeCardFromUrlPayload } from './urlPayload';
+import { getUidBySlugFromLocal, getLocalUserCard } from './cards';
 import type { CardData } from '../types';
 
 const DRAFT_KEY = 'cardforge_draft';
@@ -308,9 +309,23 @@ export function getPublicUrl(slug: string, card?: CardData): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const cleanUrl = `${origin}/c/${cleanSlug}`;
 
-  if (card) {
+  let targetCard = card;
+  if (!targetCard && typeof window !== 'undefined') {
+    const localUid = getUidBySlugFromLocal(cleanSlug);
+    if (localUid && localUid !== 'draft') {
+      targetCard = getLocalUserCard(localUid) || undefined;
+    }
+    if (!targetCard) {
+      const draft = loadDraftCard();
+      if (draft && (draft.slug?.toLowerCase() === cleanSlug || cleanSlug === 'preview' || !draft.slug)) {
+        targetCard = draft;
+      }
+    }
+  }
+
+  if (targetCard) {
     try {
-      const encoded = encodeCardToUrlPayload(card);
+      const encoded = encodeCardToUrlPayload(targetCard);
       if (encoded) {
         return `${cleanUrl}?d=${encoded}`;
       }
