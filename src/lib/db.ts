@@ -8,7 +8,38 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
   if (!slug) return null;
   const cleanSlug = slug.trim().toLowerCase();
 
-  // 1. Check URL encoded payload parameter (?d= or #d=)
+  // 1. If not 'preview', immediately fetch canonical card from backend server
+  if (cleanSlug !== 'preview') {
+    try {
+      const res = await fetch(`/api/cards/${encodeURIComponent(cleanSlug)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.card) {
+          return json.card;
+        }
+      }
+    } catch (err) {
+      console.warn('[API] Server fetch note:', err);
+    }
+  }
+
+  // 2. Query Firestore if configured
+  if (isFirebaseConfigured && db && cleanSlug !== 'preview') {
+    try {
+      const cardsCol = collection(db, 'cards');
+      const q = query(cardsCol, where('slug', '==', cleanSlug));
+      const querySnap = await getDocs(q);
+
+      if (!querySnap.empty) {
+        const firstDoc = querySnap.docs[0];
+        return { ...(firstDoc.data() as CardData), slug: cleanSlug };
+      }
+    } catch (err) {
+      console.warn('[Firestore] Error fetching card by slug:', err);
+    }
+  }
+
+  // 3. Check URL encoded payload parameter (?d= or #d=) for offline/preview cards
   if (typeof window !== 'undefined') {
     const searchParams = new URLSearchParams(window.location.search);
     let dParam = searchParams.get('d');
@@ -27,28 +58,24 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
       const decoded = decodeCardFromUrlPayload(dParam);
       if (decoded) {
         decoded.slug = decoded.slug || cleanSlug;
+        // If photo is absent or a legacy sample photo, merge genuine photo from storage / API
+        if (!decoded.photo || decoded.photo.includes('images.unsplash.com')) {
+          decoded.photo = '';
+          const draft = loadLocalDraftCard();
+          const localUid = getUidBySlugFromLocal(cleanSlug);
+          const localCard = localUid && localUid !== 'draft' ? getLocalUserCard(localUid) : null;
+          if (localCard?.photo && !localCard.photo.includes('images.unsplash.com')) {
+            decoded.photo = localCard.photo;
+          } else if (draft?.photo && !draft.photo.includes('images.unsplash.com') && (draft.slug === cleanSlug || !draft.slug || cleanSlug === 'preview')) {
+            decoded.photo = draft.photo;
+          }
+        }
         return decoded;
       }
     }
   }
 
-  // 2. Query Firestore if configured
-  if (isFirebaseConfigured && db) {
-    try {
-      const cardsCol = collection(db, 'cards');
-      const q = query(cardsCol, where('slug', '==', cleanSlug));
-      const querySnap = await getDocs(q);
-
-      if (!querySnap.empty) {
-        const firstDoc = querySnap.docs[0];
-        return { ...(firstDoc.data() as CardData), slug: cleanSlug };
-      }
-    } catch (err) {
-      console.warn('[Firestore] Error fetching card by slug:', err);
-    }
-  }
-
-  // 3. Check local storage / slug mapping
+  // 4. Check local storage / slug mapping
   const localUid = getUidBySlugFromLocal(cleanSlug);
   if (localUid) {
     if (localUid === 'draft') {
@@ -58,22 +85,11 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
     if (localCard) return localCard;
   }
 
-  // 4. Check draft card
+  // 5. Check draft card
   const draft = loadLocalDraftCard();
   if (draft && draft.slug && draft.slug.toLowerCase() === cleanSlug) {
     return draft;
   }
-
-  // 5. Query local backend Express server (if running)
-  try {
-    const res = await fetch(`/api/cards/${encodeURIComponent(cleanSlug)}`);
-    if (res.ok) {
-      const json = await res.json();
-      if (json?.card) {
-        return json.card;
-      }
-    }
-  } catch {}
 
   // 6. If slug is 'preview', return local draft
   if (cleanSlug === 'preview' && draft) {

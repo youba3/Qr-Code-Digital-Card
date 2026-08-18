@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { Phone, Mail, Globe, User } from 'lucide-react';
@@ -14,6 +14,12 @@ interface CardPreviewProps {
 export const CardPreview = forwardRef<HTMLDivElement, CardPreviewProps>(
   ({ card }, ref) => {
     const { t } = useTranslation();
+    const [photoError, setPhotoError] = useState(false);
+
+    // Reset error whenever photo updates
+    useEffect(() => {
+      setPhotoError(false);
+    }, [card.photo]);
 
     // Resolve primary direct contacts
     const phoneSocial = (card.socials || []).find((s) => s.platform === 'phone');
@@ -43,6 +49,7 @@ export const CardPreview = forwardRef<HTMLDivElement, CardPreviewProps>(
     const extraCount = cardSocials.length - maxIcons;
 
     const publicUrl = getPublicUrl(card.slug || 'preview', card);
+    const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
     const accentColor = card.theme || '#101c5e';
 
     return (
@@ -75,12 +82,13 @@ export const CardPreview = forwardRef<HTMLDivElement, CardPreviewProps>(
               className="w-20 h-20 sm:w-22 sm:h-22 rounded-full overflow-hidden border-4 border-white shadow-md bg-slate-100 flex items-center justify-center transition-colors"
               style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}
             >
-              {card.photo ? (
+              {card.photo && !photoError ? (
                 <img
                   src={card.photo}
                   alt={card.fullName || 'Card Photo'}
                   className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
+                  onError={() => setPhotoError(true)}
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div
@@ -141,7 +149,7 @@ export const CardPreview = forwardRef<HTMLDivElement, CardPreviewProps>(
             }}
           >
             <QRCodeSVG
-              value={publicUrl}
+              value={safeQrValue}
               size={92}
               level="M"
               includeMargin={false}

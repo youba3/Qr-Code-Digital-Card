@@ -9,13 +9,13 @@ const SLUG_TO_UID_KEY = 'cardforge_slug_to_uid';
 
 export const INITIAL_TEMPLATE_CARD: CardData = {
   slug: '',
-  fullName: 'Sarah Jenkins',
-  title: 'Lead Product Designer',
-  company: 'Aura Studio',
+  fullName: 'Your Name',
+  title: 'Professional Title',
+  company: 'Company / Organization',
   phone: '+1 (555) 234-5678',
-  email: 'sarah@aurastudio.design',
-  website: 'aurastudio.design',
-  photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  email: 'hello@example.com',
+  website: 'example.com',
+  photo: '',
   theme: '#101c5e',
   layout: 'vertical',
   socials: [
@@ -79,6 +79,9 @@ export async function loadCard(uid: string, fallbackEmail?: string | null, displ
       const snap = await getDoc(cardDocRef);
       if (snap.exists()) {
         const data = snap.data() as CardData;
+        if (data.photo && data.photo.includes('images.unsplash.com')) {
+          data.photo = '';
+        }
         const normalized: CardData = {
           ...createNewUserCard(uid, fallbackEmail, displayName),
           ...data,
@@ -97,6 +100,9 @@ export async function loadCard(uid: string, fallbackEmail?: string | null, displ
   // 2. Check local storage cache for this user
   const cached = getLocalUserCard(uid);
   if (cached) {
+    if (cached.photo && cached.photo.includes('images.unsplash.com')) {
+      cached.photo = '';
+    }
     return cached;
   }
 
@@ -177,7 +183,13 @@ export function saveLocalUserCard(uid: string, card: CardData): void {
 export function loadLocalDraftCard(): CardData {
   try {
     const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.photo && parsed.photo.includes('images.unsplash.com')) {
+        parsed.photo = '';
+      }
+      return parsed;
+    }
   } catch {}
   return { ...INITIAL_TEMPLATE_CARD, slug: nanoid(8).toLowerCase() };
 }

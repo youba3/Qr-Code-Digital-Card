@@ -23,7 +23,7 @@ import { downloadVCard } from '../lib/vcard';
 import { getCardBySlug, incrementCardScans } from '../lib/db';
 import { getPublicUrl } from '../lib/storage';
 import { decodeCardFromUrlPayload } from '../lib/urlPayload';
-import { loadLocalDraftCard } from '../lib/cards';
+import { loadLocalDraftCard, getUidBySlugFromLocal, getLocalUserCard } from '../lib/cards';
 import type { CardData, SocialProfile } from '../types';
 
 interface PublicCardProps {
@@ -40,9 +40,20 @@ export const PublicCard: React.FC<PublicCardProps> = ({
   onNavigateToHome,
 }) => {
   const { t } = useTranslation();
+  const [photoError, setPhotoError] = useState(false);
 
   // 1. Immediately resolve initial card data synchronously so user info appears instantly
   const initialCard = useMemo(() => {
+    const cleanSlug = (slug || 'preview').trim().toLowerCase();
+    const draft = loadLocalDraftCard();
+    const localUid = typeof window !== 'undefined' ? getUidBySlugFromLocal(cleanSlug) : null;
+    const localCard = localUid && localUid !== 'draft' ? getLocalUserCard(localUid) : null;
+    const candidatePhoto =
+      fallbackCard?.photo ||
+      localCard?.photo ||
+      (draft?.photo && (draft.slug === cleanSlug || !draft.slug || cleanSlug === 'preview') ? draft.photo : '');
+    const existingPhoto = candidatePhoto && !candidatePhoto.includes('images.unsplash.com') ? candidatePhoto : '';
+
     // Check URL payload (?d= or #d=)
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
@@ -58,20 +69,26 @@ export const PublicCard: React.FC<PublicCardProps> = ({
       if (dParam) {
         const decoded = decodeCardFromUrlPayload(dParam);
         if (decoded) {
-          decoded.slug = decoded.slug || slug;
+          decoded.slug = decoded.slug || cleanSlug;
+          if (!decoded.photo && existingPhoto) {
+            decoded.photo = existingPhoto;
+          }
           return decoded;
         }
       }
     }
 
     // Check if fallbackCard from editor matches
-    if (fallbackCard && (fallbackCard.slug === slug || !slug || slug === 'preview')) {
+    if (fallbackCard && (fallbackCard.slug === cleanSlug || !cleanSlug || cleanSlug === 'preview')) {
       return fallbackCard;
     }
 
+    if (localCard) {
+      return localCard;
+    }
+
     // Check local draft card
-    const draft = loadLocalDraftCard();
-    if (draft && (draft.slug === slug || slug === 'preview')) {
+    if (draft && (draft.slug === cleanSlug || cleanSlug === 'preview' || !draft.slug)) {
       return draft;
     }
 
@@ -95,13 +112,18 @@ export const PublicCard: React.FC<PublicCardProps> = ({
     getCardBySlug(slug).then((loaded) => {
       if (!isMounted) return;
       if (loaded) {
+        if (!loaded.photo && initialCard?.photo) {
+          loaded.photo = initialCard.photo;
+        }
         setCard(loaded);
+        setPhotoError(false);
         setScans(loaded.scans || 0);
         incrementCardScans(loaded.slug || slug, (loaded as any).uid).then((count) => {
           if (isMounted && count) setScans(count);
         });
       } else if (initialCard) {
         setCard(initialCard);
+        setPhotoError(false);
         setScans(initialCard.scans || 0);
       }
       setLoading(false);
@@ -111,6 +133,10 @@ export const PublicCard: React.FC<PublicCardProps> = ({
       isMounted = false;
     };
   }, [slug, initialCard]);
+
+  useEffect(() => {
+    setPhotoError(false);
+  }, [card?.photo]);
 
   const handleSaveContact = () => {
     if (!card) return;
@@ -255,6 +281,7 @@ export const PublicCard: React.FC<PublicCardProps> = ({
 
   const accentColor = card.theme || '#101c5e';
   const publicUrl = getPublicUrl(card.slug || slug, card);
+  const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || slug || 'preview').toLowerCase()}`;
 
   // Direct quick actions
   const phoneItem = allChannels.find((s) => s.platform.toLowerCase() === 'phone');
@@ -343,11 +370,13 @@ export const PublicCard: React.FC<PublicCardProps> = ({
               className="w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1 bg-white shadow-lg overflow-hidden border-2"
               style={{ borderColor: accentColor }}
             >
-              {card.photo ? (
+              {card.photo && !photoError ? (
                 <img
                   src={card.photo}
                   alt={card.fullName || 'Contact'}
                   className="w-full h-full object-cover rounded-full"
+                  onError={() => setPhotoError(true)}
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div
@@ -605,7 +634,7 @@ export const PublicCard: React.FC<PublicCardProps> = ({
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block mb-4 shadow-inner">
               <QRCodeSVG
-                value={publicUrl}
+                value={safeQrValue}
                 size={180}
                 level="M"
                 fgColor={accentColor}

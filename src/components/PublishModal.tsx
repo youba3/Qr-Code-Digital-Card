@@ -24,6 +24,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   if (!isOpen) return null;
 
   const publicUrl = getPublicUrl(card.slug, card);
+  const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
   const accentColor = card.theme || '#101c5e';
 
   const handleCopyLink = async () => {
@@ -97,9 +98,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center shadow-inner">
             <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-100">
               <QRCodeSVG
-                value={publicUrl}
+                value={safeQrValue}
                 size={160}
-                level="H"
+                level="M"
                 includeMargin={true}
                 fgColor={accentColor}
                 bgColor="#ffffff"

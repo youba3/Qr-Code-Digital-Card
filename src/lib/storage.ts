@@ -13,24 +13,24 @@ let memoryDraft: CardData | null = null;
 
 export const DEFAULT_CARD: CardData = {
   slug: '',
-  fullName: 'Sarah Jenkins',
-  title: 'Lead Product Designer',
-  company: 'Aura Studio',
+  fullName: 'Your Name',
+  title: 'Professional Title',
+  company: 'Company / Organization',
   phone: '+1 (555) 234-5678',
-  email: 'sarah@aurastudio.design',
-  website: 'aurastudio.design',
-  photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  email: 'hello@example.com',
+  website: 'example.com',
+  photo: '',
   theme: '#101c5e',
   layout: 'vertical',
   socials: [
     { platform: 'phone', value: '+1 (555) 234-5678', onCard: true },
-    { platform: 'email', value: 'sarah@aurastudio.design', onCard: true },
-    { platform: 'website', value: 'aurastudio.design', onCard: true },
-    { platform: 'instagram', value: 'sarah.j.creative', onCard: true },
-    { platform: 'facebook', value: 'sarahjenkinsdesign', onCard: true },
+    { platform: 'email', value: 'hello@example.com', onCard: true },
+    { platform: 'website', value: 'example.com', onCard: true },
+    { platform: 'instagram', value: '', onCard: false },
+    { platform: 'facebook', value: '', onCard: false },
     { platform: 'whatsapp', value: '+15552345678', onCard: true },
-    { platform: 'linkedin', value: 'sarahjenkins', onCard: true },
-    { platform: 'twitter', value: 'sarahdesigns', onCard: true },
+    { platform: 'linkedin', value: '', onCard: true },
+    { platform: 'twitter', value: '', onCard: true },
   ],
   scans: 0,
   createdAt: new Date().toISOString(),
@@ -81,6 +81,9 @@ if (typeof window !== 'undefined') {
 
 export function loadDraftCard(): CardData {
   if (memoryDraft) {
+    if (memoryDraft.photo && memoryDraft.photo.includes('images.unsplash.com')) {
+      memoryDraft.photo = '';
+    }
     return { ...DEFAULT_CARD, ...memoryDraft };
   }
 
@@ -88,6 +91,9 @@ export function loadDraftCard(): CardData {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (parsed.photo && parsed.photo.includes('images.unsplash.com')) {
+        parsed.photo = '';
+      }
       memoryDraft = parsed;
       return { ...DEFAULT_CARD, ...parsed };
     }
@@ -294,19 +300,22 @@ export function incrementScanCount(slug: string): number {
 
 /**
  * Returns public URL for sharing and QR code.
- * Includes compressed payload parameter `?d=...` when card data is available,
- * guaranteeing 100% instant cross-device opening on any phone scanner even on static hosting like Netlify!
+ * Clean canonical URL /c/:slug fetches complete data (including high-res photo) from storage/API.
+ * If slug is preview or offline, safely attaches compressed payload.
  */
 export function getPublicUrl(slug: string, card?: CardData): string {
   const cleanSlug = (slug || card?.slug || 'preview').trim().toLowerCase();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const cleanUrl = `${origin}/c/${cleanSlug}`;
 
-  if (card) {
-    const encoded = encodeCardToUrlPayload(card);
-    if (encoded) {
-      return `${origin}/c/${cleanSlug}?d=${encoded}`;
-    }
+  if (cleanSlug === 'preview' && card) {
+    try {
+      const encoded = encodeCardToUrlPayload(card);
+      if (encoded && encoded.length < 1200) {
+        return `${cleanUrl}?d=${encoded}`;
+      }
+    } catch {}
   }
 
-  return `${origin}/c/${cleanSlug}`;
+  return cleanUrl;
 }

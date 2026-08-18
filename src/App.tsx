@@ -153,8 +153,12 @@ function AppContent() {
   };
 
   const handleApplyPersonaAndEdit = (personaCard: CardData) => {
-    setCard(personaCard);
-    saveDraftCard(personaCard);
+    const updated = {
+      ...personaCard,
+      photo: card.photo || '',
+    };
+    setCard(updated);
+    saveDraftCard(updated);
     navigateToEditor();
   };
 

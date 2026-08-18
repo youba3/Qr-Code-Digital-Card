@@ -240,7 +240,7 @@ export async function loginWithGoogle(): Promise<AuthUser> {
     uid: mockUid,
     email: 'alex.morgan@gmail.com',
     displayName: 'Alex Morgan',
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    photoURL: '',
   };
   setStoredLocalUser(authUser);
   notifyLocalAuthListeners(authUser);
@@ -250,9 +250,9 @@ export async function loginWithGoogle(): Promise<AuthUser> {
 export async function loginAsDemoUser(): Promise<AuthUser> {
   const authUser: AuthUser = {
     uid: 'demo_user_01',
-    email: 'sarah.jenkins@aurastudio.design',
-    displayName: 'Sarah Jenkins',
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    email: 'user@example.com',
+    displayName: 'Card Owner',
+    photoURL: '',
   };
   setStoredLocalUser(authUser);
   notifyLocalAuthListeners(authUser);
