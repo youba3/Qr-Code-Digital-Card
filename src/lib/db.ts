@@ -79,6 +79,9 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
         urlCard.photo = draft.photo;
       }
     }
+    try {
+      saveLocalUserCard('cache_' + (urlCard.slug || cleanSlug), urlCard);
+    } catch {}
     return urlCard;
   }
 

@@ -49,7 +49,7 @@ export const CardPreview = forwardRef<HTMLDivElement, CardPreviewProps>(
     const extraCount = cardSocials.length - maxIcons;
 
     const publicUrl = getPublicUrl(card.slug || 'preview', card);
-    const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
+    const safeQrValue = publicUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
     const accentColor = card.theme || '#101c5e';
 
     return (

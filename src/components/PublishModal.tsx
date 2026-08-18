@@ -24,7 +24,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   if (!isOpen) return null;
 
   const publicUrl = getPublicUrl(card.slug, card);
-  const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
+  const safeQrValue = publicUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || 'preview').toLowerCase()}`;
   const accentColor = card.theme || '#101c5e';
 
   const handleCopyLink = async () => {

@@ -26,7 +26,7 @@ function AppContent() {
     if (window.location.search.startsWith('?/')) {
       const rawRedirect = window.location.search.slice(2).split('&')[0].replace(/~and~/g, '&');
       if (rawRedirect.startsWith('c/')) {
-        const slug = rawRedirect.replace(/^c\//, '').split('/')[0];
+        const slug = rawRedirect.replace(/^c\//, '').split('/')[0].split('?')[0];
         if (slug) return { page: 'public', slug };
       }
       if (rawRedirect === 'editor') {
@@ -34,18 +34,23 @@ function AppContent() {
       }
     }
 
-    // 1. Check query param: ?c=slug or ?card=slug
+    // 1. Check path: /c/slug or /c
+    if (pathname.startsWith('/c/')) {
+      const pathSlug = pathname.replace('/c/', '').split('/')[0].split('?')[0];
+      if (pathSlug) return { page: 'public', slug: pathSlug };
+      return { page: 'public', slug: 'preview' };
+    }
+    if (pathname === '/c' || pathname === '/c/') {
+      return { page: 'public', slug: 'preview' };
+    }
+
+    // 2. Check query param: ?c=slug or ?card=slug
     const querySlug = searchParams.get('c') || searchParams.get('card');
     if (querySlug) {
       return { page: 'public', slug: querySlug };
     }
 
-    // 1b. Check if ?d= (encoded card) exists on root URL
-    if (searchParams.get('d')) {
-      return { page: 'public', slug: 'preview' };
-    }
-
-    // 2. Check hash: #/c/slug or #c=slug or #/c/slug?d=...
+    // 3. Check hash: #/c/slug or #c=slug or #/c/slug?d=...
     if (hash.startsWith('#/c/')) {
       const cleanHash = hash.replace('#/c/', '').split('?')[0].split('#')[0];
       if (cleanHash) return { page: 'public', slug: cleanHash };
@@ -56,21 +61,13 @@ function AppContent() {
       const hashSlug = hashParams.get('c');
       if (hashSlug) return { page: 'public', slug: hashSlug };
     }
-    if (hash.includes('d=')) {
+
+    // 4. Check if ?d= (encoded card) exists on root URL
+    if (searchParams.get('d') || hash.includes('d=')) {
       return { page: 'public', slug: 'preview' };
     }
 
-    // 3. Check path: /c/slug or /c
-    if (pathname.startsWith('/c/')) {
-      const pathSlug = pathname.replace('/c/', '').split('/')[0];
-      if (pathSlug) return { page: 'public', slug: pathSlug };
-      return { page: 'public', slug: 'preview' };
-    }
-    if (pathname === '/c' || pathname === '/c/') {
-      return { page: 'public', slug: 'preview' };
-    }
-
-    // 4. Check if explicitly in editor mode: ?view=editor or #/editor or /editor
+    // 5. Check if explicitly in editor mode: ?view=editor or #/editor or /editor
     if (
       searchParams.get('view') === 'editor' ||
       searchParams.get('tab') === 'editor' ||

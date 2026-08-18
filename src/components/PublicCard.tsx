@@ -281,7 +281,7 @@ export const PublicCard: React.FC<PublicCardProps> = ({
 
   const accentColor = card.theme || '#101c5e';
   const publicUrl = getPublicUrl(card.slug || slug, card);
-  const safeQrValue = publicUrl && publicUrl.length < 1500 ? publicUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || slug || 'preview').toLowerCase()}`;
+  const safeQrValue = publicUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${(card.slug || slug || 'preview').toLowerCase()}`;
 
   // Direct quick actions
   const phoneItem = allChannels.find((s) => s.platform.toLowerCase() === 'phone');

@@ -311,8 +311,7 @@ export function getPublicUrl(slug: string, card?: CardData): string {
   if (card) {
     try {
       const encoded = encodeCardToUrlPayload(card);
-      // Keep QR code URL under 1600 characters for guaranteed crisp, fast scanning on all phone cameras
-      if (encoded && encoded.length < 1600) {
+      if (encoded) {
         return `${cleanUrl}?d=${encoded}`;
       }
     } catch {}
