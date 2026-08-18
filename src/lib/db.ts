@@ -8,38 +8,8 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
   if (!slug) return null;
   const cleanSlug = slug.trim().toLowerCase();
 
-  // 1. If not 'preview', immediately fetch canonical card from backend server
-  if (cleanSlug !== 'preview') {
-    try {
-      const res = await fetch(`/api/cards/${encodeURIComponent(cleanSlug)}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.card) {
-          return json.card;
-        }
-      }
-    } catch (err) {
-      console.warn('[API] Server fetch note:', err);
-    }
-  }
-
-  // 2. Query Firestore if configured
-  if (isFirebaseConfigured && db && cleanSlug !== 'preview') {
-    try {
-      const cardsCol = collection(db, 'cards');
-      const q = query(cardsCol, where('slug', '==', cleanSlug));
-      const querySnap = await getDocs(q);
-
-      if (!querySnap.empty) {
-        const firstDoc = querySnap.docs[0];
-        return { ...(firstDoc.data() as CardData), slug: cleanSlug };
-      }
-    } catch (err) {
-      console.warn('[Firestore] Error fetching card by slug:', err);
-    }
-  }
-
-  // 3. Check URL encoded payload parameter (?d= or #d=) for offline/preview cards
+  // 1. Check URL encoded payload parameter (?d= or #d=) first - provides 100% offline & static-host compatibility (Netlify, Vercel, GitHub Pages)
+  let urlCard: CardData | null = null;
   if (typeof window !== 'undefined') {
     const searchParams = new URLSearchParams(window.location.search);
     let dParam = searchParams.get('d');
@@ -58,24 +28,61 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
       const decoded = decodeCardFromUrlPayload(dParam);
       if (decoded) {
         decoded.slug = decoded.slug || cleanSlug;
-        // If photo is absent or a legacy sample photo, merge genuine photo from storage / API
         if (!decoded.photo || decoded.photo.includes('images.unsplash.com')) {
           decoded.photo = '';
-          const draft = loadLocalDraftCard();
-          const localUid = getUidBySlugFromLocal(cleanSlug);
-          const localCard = localUid && localUid !== 'draft' ? getLocalUserCard(localUid) : null;
-          if (localCard?.photo && !localCard.photo.includes('images.unsplash.com')) {
-            decoded.photo = localCard.photo;
-          } else if (draft?.photo && !draft.photo.includes('images.unsplash.com') && (draft.slug === cleanSlug || !draft.slug || cleanSlug === 'preview')) {
-            decoded.photo = draft.photo;
-          }
         }
-        return decoded;
+        urlCard = decoded;
       }
     }
   }
 
-  // 4. Check local storage / slug mapping
+  // 2. Fetch canonical card from backend server (if full-stack server running)
+  if (cleanSlug !== 'preview') {
+    try {
+      const res = await fetch(`/api/cards/${encodeURIComponent(cleanSlug)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.card) {
+          return json.card;
+        }
+      }
+    } catch (err) {
+      // Server not running or static host (Netlify)
+    }
+  }
+
+  // 3. Query Firestore if configured
+  if (isFirebaseConfigured && db && cleanSlug !== 'preview') {
+    try {
+      const cardsCol = collection(db, 'cards');
+      const q = query(cardsCol, where('slug', '==', cleanSlug));
+      const querySnap = await getDocs(q);
+
+      if (!querySnap.empty) {
+        const firstDoc = querySnap.docs[0];
+        return { ...(firstDoc.data() as CardData), slug: cleanSlug };
+      }
+    } catch (err) {
+      console.warn('[Firestore] Error fetching card by slug:', err);
+    }
+  }
+
+  // 4. Return URL payload card if decoded (essential for Netlify & static hosts)
+  if (urlCard) {
+    const localUid = getUidBySlugFromLocal(cleanSlug);
+    const localCard = localUid && localUid !== 'draft' ? getLocalUserCard(localUid) : null;
+    const draft = loadLocalDraftCard();
+    if (!urlCard.photo) {
+      if (localCard?.photo && !localCard.photo.includes('images.unsplash.com')) {
+        urlCard.photo = localCard.photo;
+      } else if (draft?.photo && !draft.photo.includes('images.unsplash.com') && (draft.slug === cleanSlug || !draft.slug || cleanSlug === 'preview')) {
+        urlCard.photo = draft.photo;
+      }
+    }
+    return urlCard;
+  }
+
+  // 5. Check local storage / slug mapping
   const localUid = getUidBySlugFromLocal(cleanSlug);
   if (localUid) {
     if (localUid === 'draft') {
@@ -85,13 +92,13 @@ export async function getCardBySlug(slug: string): Promise<CardData | null> {
     if (localCard) return localCard;
   }
 
-  // 5. Check draft card
+  // 6. Check draft card
   const draft = loadLocalDraftCard();
   if (draft && draft.slug && draft.slug.toLowerCase() === cleanSlug) {
     return draft;
   }
 
-  // 6. If slug is 'preview', return local draft
+  // 7. If slug is 'preview', return local draft
   if (cleanSlug === 'preview' && draft) {
     return draft;
   }

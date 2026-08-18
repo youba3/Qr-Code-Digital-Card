@@ -40,12 +40,20 @@ export function encodeCardToUrlPayload(card: CardData): string {
       }
     });
 
-    // Remote or short embeddable photo URL (exclude huge base64 data URLs to protect QR code capacity)
-    const isEmbeddablePhoto =
+    // Embed photo in URL payload (remote URL, micro-thumbnail, or short data URL)
+    let photoToEmbed = '';
+    if (card.photoThumb && card.photoThumb.length < 1400) {
+      photoToEmbed = card.photoThumb;
+    } else if (
       card.photo &&
       card.photo.trim().length > 0 &&
       !card.photo.startsWith('data:') &&
-      (card.photo.startsWith('http') || card.photo.startsWith('/') || card.photo.length < 300);
+      (card.photo.startsWith('http') || card.photo.startsWith('/') || card.photo.length < 300)
+    ) {
+      photoToEmbed = card.photo;
+    } else if (card.photo && card.photo.length < 1200) {
+      photoToEmbed = card.photo;
+    }
 
     const minimal: Record<string, any> = {
       s: card.slug || '',
@@ -56,7 +64,7 @@ export function encodeCardToUrlPayload(card: CardData): string {
       e: card.email || '',
       w: card.website || '',
       th: card.theme || '#101c5e',
-      ...(isEmbeddablePhoto ? { ph: card.photo } : {}),
+      ...(photoToEmbed ? { ph: photoToEmbed } : {}),
       ...(socials.length > 0 ? { soc: socials } : {}),
     };
 

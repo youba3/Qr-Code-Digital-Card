@@ -15,6 +15,7 @@ export interface CardData {
   email: string;
   website: string;
   photo: string;
+  photoThumb?: string;
   theme: string;
   layout: 'vertical';
   language?: string;

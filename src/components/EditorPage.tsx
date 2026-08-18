@@ -166,14 +166,26 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     try {
       showToast(t('editor.photoOptimizing'));
       const compressed = await compressImage(file, 400, 400, 0.85);
-      handleChange('photo', compressed);
+      const thumb = await compressImage(file, 64, 64, 0.4);
+      const updated: CardData = {
+        ...card,
+        photo: compressed,
+        photoThumb: thumb,
+      };
+      onUpdateCard(updated);
+      triggerAutoSave(updated);
       showToast(t('editor.photoSuccess'));
     } catch (err) {
       console.error('Failed to compress image', err);
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          handleChange('photo', reader.result);
+          const updated: CardData = {
+            ...card,
+            photo: reader.result,
+          };
+          onUpdateCard(updated);
+          triggerAutoSave(updated);
           showToast(t('editor.photoSuccess'));
         }
       };
@@ -182,7 +194,13 @@ export const EditorPage: React.FC<EditorPageProps> = ({
   };
 
   const removePhoto = () => {
-    handleChange('photo', '');
+    const updated: CardData = {
+      ...card,
+      photo: '',
+      photoThumb: '',
+    };
+    onUpdateCard(updated);
+    triggerAutoSave(updated);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }

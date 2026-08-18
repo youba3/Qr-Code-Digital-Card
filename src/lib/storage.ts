@@ -300,18 +300,19 @@ export function incrementScanCount(slug: string): number {
 
 /**
  * Returns public URL for sharing and QR code.
- * Clean canonical URL /c/:slug fetches complete data (including high-res photo) from storage/API.
- * If slug is preview or offline, safely attaches compressed payload.
+ * Attaches compact compressed payload ?d=... to guarantee instant cross-device opening
+ * on any phone QR scanner and static hosting providers like Netlify and GitHub Pages.
  */
 export function getPublicUrl(slug: string, card?: CardData): string {
   const cleanSlug = (slug || card?.slug || 'preview').trim().toLowerCase();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const cleanUrl = `${origin}/c/${cleanSlug}`;
 
-  if (cleanSlug === 'preview' && card) {
+  if (card) {
     try {
       const encoded = encodeCardToUrlPayload(card);
-      if (encoded && encoded.length < 1200) {
+      // Keep QR code URL under 1600 characters for guaranteed crisp, fast scanning on all phone cameras
+      if (encoded && encoded.length < 1600) {
         return `${cleanUrl}?d=${encoded}`;
       }
     } catch {}
